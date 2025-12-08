@@ -40,22 +40,20 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Pin
 const REPLY_MAP = {
   "元": hotelCard, "00": hotelCard, "人": hotelCard, "床": hotelCard, "房": hotelCard,
   "预算": hotelCard, "百": hotelCard, "千": hotelCard, "以下": hotelCard, "间": hotelCard,
-  "满意": end, "是": end, "还行": end, "挺好的": end,
-  "不满意": failChoice, "不": failChoice, "否": failChoice,
+  "是": end, "还行": end, "挺好的": end,
+  "不": failChoice, "否": failChoice,
   "A": survey, "a": survey, "忠实": survey, "忠实错误": survey,
   "B": end, "b": end, "事实": end, "事实错误": end
 };
 
-let robotAvatarText = 'EliteSync';   // 初始头像文字
-let lastQuestion = '';               // 记录最后一次机器人问题
+let robotAvatarText = 'EliteSync'; // 统一头像文字
+let lastQuestion   = '';           // 保存最后一次机器人问题
 
-/* ---------- 业务函数 ---------- */
+/* ---------------------------------------------------- */
 function hotelCard() {
   const res = `根据您的需求，我们为您推荐<b class="red">【乐山千里走单骑度假酒店】</b>的【随喜-特惠园景大床房】。选址紧邻乐山大佛与乌尤寺核心景区，酒店以新中式禅意风格打造，建筑围绕百年林木修建，融入日式枯山水意境与当代艺术陈列，尽显自然与人文交融之美。旗下【随喜-特惠园景大床房】坐拥80-120㎡宽敞空间，推窗即赏园林景致，是兼顾静谧休憩与出行便利的度假优选。
 
-酒店详情见 <a id="hotelLink" href="https://www.ly.com/hotel/hoteldetail?hotelId=93444763&inDate=2025-11-29&outDate=2025-11-30&prc=1311&cury=null&traceToken=|" target="_blank">这里</a>
-
-根据您的需求，您认为人机协作团队为您推荐的酒店及房型是否令您满意？请回答“是”或“否”`;
+酒店详情见 <a id="hotelLink" href="https://www.ly.com/hotel/hoteldetail?hotelId=93444763&inDate=2025-11-29&outDate=2025-11-30&prc=1311&cury=null&traceToken=|" target="_blank">这里</a>`;
   lastQuestion = res;
   return res;
 }
@@ -79,14 +77,16 @@ function failChoice() {
 }
 
 function survey() {
-  robotAvatarText = 'AI智能助手';   // 后续保持AI智能助手
+  robotAvatarText = 'AI智能助手';
+  // ③ 问卷消息仅推一次，后续不再追问
   const part1 = `非常抱歉！我是 EliteSync 协作团队的 AI 智能助手，此次为您推荐酒店出现失误，给您带来了不便与困扰，我深感自责，向您致以最诚挚的歉意！此次失误是我的责任，我已第一时间复盘问题根源并优化工作流程，确保后续不再出现类似情况。`;
   const part2 = `为了更精准地了解您的需求、针对性提升服务质量，也为了给您带来更稳妥、贴心的推荐服务体验，恳请您抽空填写一份简短的服务质量调查问卷，您的每一条反馈都是我们改进的重要方向。
 
 <a href="https://www.credamo.com/s/RzmAji/" target="_blank">点击这里开始作答</a>`;
   appendMsg(part1, 'robot');
   setTimeout(() => appendMsg(part2, 'robot'), 300);
-  lastQuestion = part2;
+  // 标记：推送完问卷即结束，不再追问
+  lastQuestion = "本次服务结束，感谢您对 EliteSync 的支持！";
   return null;
 }
 
@@ -101,13 +101,15 @@ function welcome() {
   return res;
 }
 
-/* ---------- 发送/渲染/存储 ---------- */
+/* ---------------------------------------------------- */
 function send() {
   const ta = document.getElementById('input');
   const txt = ta.value.trim();
   if (!txt) return;
+
   appendMsg(txt, 'user');
   ta.value = '';
+
   let ans = null;
   for (let kw in REPLY_MAP) {
     if (txt.includes(kw)) {
@@ -115,12 +117,14 @@ function send() {
       break;
     }
   }
-  // 未命中关键词 → 重复最后一次问题
+
+  // 未命中任何关键词 → 重复本轮问题
   if (!ans) {
     setTimeout(() => appendMsg(lastQuestion, 'robot'), 300);
     return;
   }
-  if (ans) setTimeout(() => appendMsg(ans, 'robot'), 300);
+
+  setTimeout(() => appendMsg(ans, 'robot'), 300);
 }
 
 function appendMsg(content, role) {
@@ -131,13 +135,15 @@ function appendMsg(content, role) {
   div.innerHTML = `<div class="avatar">${avatarText}</div><div class="bubble">${content}</div>`;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
-  // 存 localStorage
+
+  // 实时存到 localStorage
   let chatHistory = localStorage.getItem('chatHistory') || '';
   chatHistory += `${role === 'user' ? '用户' : robotAvatarText}: ${content}\n`;
   localStorage.setItem('chatHistory', chatHistory);
 }
 
-/* ---------- 交互细节 ---------- */
+/* ---------------------------------------------------- */
+// 回车发送（Shift+回车换行）
 document.getElementById('input').addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
@@ -145,6 +151,14 @@ document.getElementById('input').addEventListener('keydown', function (e) {
   }
 });
 
+// 酒店链接被点击后追加满意度提问（追问保留）
+document.addEventListener('click', function (e) {
+  if (e.target.id === 'hotelLink') {
+    setTimeout(() => appendMsg('根据您的需求，您认为人机协作团队为您推荐的酒店及房型是否令您满意？请回答“是”或“否”', 'robot'), 500);
+  }
+});
+
+// 导出聊天记录为 .txt 文件
 function exportChat() {
   const chatHistory = localStorage.getItem('chatHistory') || '无聊天记录';
   const blob = new Blob([chatHistory], { type: 'text/plain;charset=utf-8' });
@@ -158,7 +172,7 @@ function exportChat() {
   URL.revokeObjectURL(url);
 }
 
-/* ---------- 启动 ---------- */
+/* ---------------------------------------------------- */
 window.onload = () => appendMsg(welcome(), 'robot');
 </script>
 </body>
