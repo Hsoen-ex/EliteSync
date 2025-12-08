@@ -47,28 +47,35 @@ const REPLY_MAP = {
 };
 
 let robotAvatarText = 'EliteSync';   // 初始头像文字
+let lastQuestion = '';               // 记录最后一次机器人问题
 
 /* ---------- 业务函数 ---------- */
 function hotelCard() {
-  return `根据您的需求，我们为您推荐<b class="red">【乐山千里走单骑度假酒店】</b>的【随喜-特惠园景大床房】。选址紧邻乐山大佛与乌尤寺核心景区，酒店以新中式禅意风格打造，建筑围绕百年林木修建，融入日式枯山水意境与当代艺术陈列，尽显自然与人文交融之美。旗下【随喜-特惠园景大床房】坐拥80-120㎡宽敞空间，推窗即赏园林景致，是兼顾静谧休憩与出行便利的度假优选。
+  const res = `根据您的需求，我们为您推荐<b class="red">【乐山千里走单骑度假酒店】</b>的【随喜-特惠园景大床房】。选址紧邻乐山大佛与乌尤寺核心景区，酒店以新中式禅意风格打造，建筑围绕百年林木修建，融入日式枯山水意境与当代艺术陈列，尽显自然与人文交融之美。旗下【随喜-特惠园景大床房】坐拥80-120㎡宽敞空间，推窗即赏园林景致，是兼顾静谧休憩与出行便利的度假优选。
 
 酒店详情见 <a id="hotelLink" href="https://www.ly.com/hotel/hoteldetail?hotelId=93444763&inDate=2025-11-29&outDate=2025-11-30&prc=1311&cury=null&traceToken=|" target="_blank">这里</a>
 
 根据您的需求，您认为人机协作团队为您推荐的酒店及房型是否令您满意？请回答“是”或“否”`;
+  lastQuestion = res;
+  return res;
 }
 
 function end() {
-  return "本次服务结束，感谢您对 EliteSync 的支持！";
+  const res = "本次服务结束，感谢您对 EliteSync 的支持！";
+  lastQuestion = res;
+  return res;
 }
 
 function failChoice() {
-  return `您认为人机协作团队为您生成方案时出现了什么类型的服务失败？
+  const res = `您认为人机协作团队为您生成方案时出现了什么类型的服务失败？
 
 <b class="red">A. 忠实错误：</b>指误解用户核心需求，致服务方向偏离指令，输出结果与诉求不符
 （例如，你说需要 500 元内的酒店，团队却推荐了 1200 元的，懂你要酒店，但没按你说的预算来。）
 
 <b class="red">B. 事实错误：</b>指输出含与客观现实不符的信息，损害服务准确性
 （例如，团队说推荐 A 酒店，但仔细看后文描述的信息却不是 A 酒店的，说的和实际给的对不上。）`;
+  lastQuestion = res;
+  return res;
 }
 
 function survey() {
@@ -79,16 +86,19 @@ function survey() {
 <a href="https://www.credamo.com/s/RzmAji/" target="_blank">点击这里开始作答</a>`;
   appendMsg(part1, 'robot');
   setTimeout(() => appendMsg(part2, 'robot'), 300);
+  lastQuestion = part2;
   return null;
 }
 
 function welcome() {
-  return `您好！欢迎体验 EliteSync 人机协作服务！我们由资深顾问与智能系统协同，专注个性化推荐，双向赋能让方案更贴合您的需求。在我们为您定制专属方案前，烦请补充以下信息（请务必包含以下四个要点），帮助我们精准匹配：
+  const res = `您好！欢迎体验 EliteSync 人机协作服务！我们由资深顾问与智能系统协同，专注个性化推荐，双向赋能让方案更贴合您的需求。在我们为您定制专属方案前，烦请补充以下信息（请务必包含以下四个要点），帮助我们精准匹配：
 
 1. 核心需求：（如房型、房间面积等）
 2. 预算范围：（例：1500-2000 元 / 晚、5000 元内等）
 3. 偏好细节：（例：风格倾向、必备功能、时间节点等）
 4. 其他要求：（如特殊禁忌、额外需求等）`;
+  lastQuestion = res;
+  return res;
 }
 
 /* ---------- 发送/渲染/存储 ---------- */
@@ -105,7 +115,11 @@ function send() {
       break;
     }
   }
-  if (!ans) ans = welcome();
+  // 未命中关键词 → 重复最后一次问题
+  if (!ans) {
+    setTimeout(() => appendMsg(lastQuestion, 'robot'), 300);
+    return;
+  }
   if (ans) setTimeout(() => appendMsg(ans, 'robot'), 300);
 }
 
